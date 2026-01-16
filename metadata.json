@@ -1,0 +1,7 @@
+{
+  "name": "ArkanumLabs",
+  "description": "An AI-powered suite for affiliate marketers to generate high-quality product images with hand POV variations and persuasive voice-over scripts using Gemini models.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
