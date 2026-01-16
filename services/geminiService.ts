@@ -50,7 +50,7 @@ export const generateProductScript = async (params: {
 
   const parts: any[] = [{ text: prompt }];
   if (params.base64Image) {
-    parts.push({ inlineData: { mimeType: 'image/png', data: cleanBase64(params.base64Image) } });
+    parts.push({ inlineData: { mimeType: 'image/jpeg', data: cleanBase64(params.base64Image) } });
   }
 
   const response = await ai.models.generateContent({
@@ -85,7 +85,7 @@ export const generateMixScript = async (params: {
 
   const parts: any[] = [{ text: prompt }];
   params.products.filter(Boolean).forEach(img => {
-    parts.push({ inlineData: { mimeType: 'image/png', data: cleanBase64(img!) } });
+    parts.push({ inlineData: { mimeType: 'image/jpeg', data: cleanBase64(img!) } });
   });
 
   const response = await ai.models.generateContent({
@@ -124,15 +124,15 @@ export const generateProductMixImage = async (params: {
   const parts: any[] = [{ text: finalPrompt }];
   
   params.productImages.forEach((img) => {
-    parts.push({ inlineData: { mimeType: 'image/png', data: cleanBase64(img) } });
+    parts.push({ inlineData: { mimeType: 'image/jpeg', data: cleanBase64(img) } });
   });
 
   if (params.backgroundImage) {
-    parts.push({ inlineData: { mimeType: 'image/png', data: cleanBase64(params.backgroundImage) } });
+    parts.push({ inlineData: { mimeType: 'image/jpeg', data: cleanBase64(params.backgroundImage) } });
   }
 
   if (params.faceReference) {
-    parts.push({ inlineData: { mimeType: 'image/png', data: cleanBase64(params.faceReference) } });
+    parts.push({ inlineData: { mimeType: 'image/jpeg', data: cleanBase64(params.faceReference) } });
   }
 
   try {
@@ -189,10 +189,10 @@ export const generateProductImage = async (params: {
   const finalPrompt = `${params.prompt}. STYLE: ${coreInstruction}`;
   const parts: any[] = [
     { text: finalPrompt },
-    { inlineData: { mimeType: 'image/png', data: cleanBase64(params.base64Image) } }
+    { inlineData: { mimeType: 'image/jpeg', data: cleanBase64(params.base64Image) } }
   ];
   if (params.base64Background) {
-    parts.push({ inlineData: { mimeType: 'image/png', data: cleanBase64(params.base64Background) } });
+    parts.push({ inlineData: { mimeType: 'image/jpeg', data: cleanBase64(params.base64Background) } });
   }
 
   try {

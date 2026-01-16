@@ -61,7 +61,6 @@ export default function App() {
   const [themeMode, setThemeMode] = useState<ThemeMode>(ThemeMode.DARK);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState("");
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
 
@@ -116,7 +115,9 @@ export default function App() {
 
   const handleGenerateVariations = async () => {
     if (!image) return alert("Unggah foto produk terlebih dahulu.");
-    setIsLoading(true); setGeneratedImages([]); setSelectedImageIndex(null); setErrorMsg(null);
+    if (!process.env.API_KEY) return alert("API Key tidak ditemukan. Pastikan sudah dikonfigurasi.");
+    
+    setIsLoading(true); setGeneratedImages([]); setSelectedImageIndex(null);
     try {
       setLoadingStep("Mengoptimalkan gambar...");
       const optimizedProduct = await resizeImage(image);
@@ -126,7 +127,7 @@ export default function App() {
       const currentResults: string[] = [];
       for (let i = 0; i < 4; i++) {
         setLoadingStep(`Membuat Variasi ${i + 1} (Ultra HD)...`);
-        const result = await generateProductImage({
+        const result = await withRetry(() => generateProductImage({
           base64Image: optimizedProduct,
           base64Background: backgroundBase64,
           prompt: imagePrompt || "Professional product photography in context, high resolution, ultra detail",
@@ -135,15 +136,15 @@ export default function App() {
           includeHands: i !== 2,
           isReview: i === 3,
           aspectRatio: aspectRatio
-        });
+        }));
         if (result) {
           currentResults.push(result);
           setGeneratedImages([...currentResults]);
         }
       }
     } catch (error: any) {
-      console.error(error);
-      alert("Terjadi kesalahan saat generate. Mohon coba lagi.");
+      console.error("POV Generation Error:", error);
+      alert(`Gagal membuat variasi: ${error.message || "Terjadi kesalahan jaringan"}`);
     } finally {
       setIsLoading(false);
       setLoadingStep("");
@@ -153,8 +154,9 @@ export default function App() {
   const handleGenerateMixVariations = async () => {
     const activeProducts = mixImages.filter(img => img !== null) as string[];
     if (activeProducts.length === 0) return alert("Unggah minimal 1 produk untuk memulai.");
+    if (!process.env.API_KEY) return alert("API Key tidak ditemukan.");
     
-    setIsLoading(true); setGeneratedImages([]); setSelectedImageIndex(null); setErrorMsg(null);
+    setIsLoading(true); setGeneratedImages([]); setSelectedImageIndex(null);
     try {
       setLoadingStep("Menyiapkan aset...");
       const optimizedProducts = await Promise.all(activeProducts.map(img => resizeImage(img)));
@@ -166,7 +168,7 @@ export default function App() {
       const currentResults: string[] = [];
       for (let i = 0; i < 4; i++) {
         setLoadingStep(`Memproses Mix ${i + 1} (Ultra HD)...`);
-        const result = await generateProductMixImage({
+        const result = await withRetry(() => generateProductMixImage({
           productImages: optimizedProducts,
           backgroundImage: backgroundBase64,
           faceReference: faceRefBase64,
@@ -177,15 +179,15 @@ export default function App() {
           framing: mixFraming,
           isHijab: mixIsHijab,
           aspectRatio: aspectRatio
-        });
+        }));
         if (result) {
           currentResults.push(result);
           setGeneratedImages([...currentResults]);
         }
       }
     } catch (error: any) {
-      console.error(error);
-      alert("Mix Gagal. Mohon coba lagi.");
+      console.error("Mix Generation Error:", error);
+      alert(`Mix Gagal: ${error.message || "Periksa koneksi internet Anda"}`);
     } finally {
       setIsLoading(false);
       setLoadingStep("");
