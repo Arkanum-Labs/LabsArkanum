@@ -6,7 +6,7 @@ import {
   Sun, Moon, Grid, Eye, EyeOff, ChevronDown, Sparkles, ChevronLeft, 
   ChevronRight, Tag, Megaphone, Lock, UserCheck, Layout, RefreshCw, AlertCircle,
   Home, Package, BarChart3, LogOut, Menu, UserPlus, Camera, Users, Maximize2,
-  Scan, ArrowLeft, Frame, Trash2, Key, Database
+  Scan, ArrowLeft, Frame, Trash2, Key, Database, CheckCircle2
 } from 'lucide-react';
 import { VOICES, CTA_OPTIONS } from './constants';
 import { SleeveType, HandCount, ThemeMode, AspectRatio } from './types';
@@ -135,7 +135,7 @@ export default function App() {
     
     // Check key availability
     const effectiveKey = apiKeyMode === 'custom' ? customApiKey : process.env.API_KEY;
-    if (!effectiveKey) return alert("API Key tidak tersedia. Masukkan key Anda atau cek konfigurasi environment.");
+    if (!effectiveKey) return alert("API Key tidak tersedia. Pastikan konfigurasi Netlify atau key kustom Anda benar.");
     
     setIsLoading(true); setGeneratedImages([]); setSelectedImageIndex(null);
     try {
@@ -375,57 +375,83 @@ export default function App() {
              {/* API Key Manager Button */}
              <button 
                onClick={() => setShowApiSettings(!showApiSettings)} 
-               className={`p-2 rounded-lg transition-all ${apiKeyMode === 'custom' ? 'text-lime-500 bg-lime-500/10' : 'text-neutral-400 hover:text-white'}`}
+               className={`p-2.5 rounded-xl transition-all flex items-center gap-2 border ${apiKeyMode === 'custom' ? 'text-lime-500 bg-lime-500/10 border-lime-500/20' : 'text-neutral-400 border-neutral-800 hover:text-white hover:border-neutral-700'}`}
                title="API Key Settings"
              >
-               <Key className="w-5 h-5" />
+               <Key className="w-4 h-4" />
+               <span className="hidden md:inline text-[10px] font-black uppercase tracking-widest">
+                 {apiKeyMode === 'dev' ? 'Arkanum Key' : 'My Key'}
+               </span>
+               <div className={`w-2 h-2 rounded-full ${apiKeyMode === 'dev' || (apiKeyMode === 'custom' && customApiKey) ? 'bg-lime-500 animate-pulse' : 'bg-red-500'}`} />
              </button>
 
              {/* API Settings Popover */}
              {showApiSettings && (
-               <div className={`absolute top-full right-0 mt-3 w-72 p-4 rounded-2xl border ${themeClasses.card} shadow-2xl z-[110] animate-in fade-in zoom-in-95 duration-200 backdrop-blur-xl`}>
-                 <div className="flex justify-between items-center mb-4">
-                   <h3 className="text-[10px] font-black uppercase tracking-widest text-neutral-500">API Key Manager</h3>
-                   <button onClick={() => setShowApiSettings(false)} className="text-neutral-500 hover:text-red-500"><X className="w-4 h-4" /></button>
+               <div className={`absolute top-full right-0 mt-3 w-80 p-5 rounded-3xl border ${themeClasses.card} shadow-2xl z-[110] animate-in fade-in zoom-in-95 duration-200 backdrop-blur-2xl`}>
+                 <div className="flex justify-between items-center mb-5">
+                   <div className="flex items-center gap-2">
+                     <Settings className="w-4 h-4 text-lime-500" />
+                     <h3 className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Arkanum AI Core</h3>
+                   </div>
+                   <button onClick={() => setShowApiSettings(false)} className="p-1 rounded-full hover:bg-red-500/10 hover:text-red-500 transition-colors"><X className="w-4 h-4" /></button>
                  </div>
                  
-                 <div className="space-y-4">
-                   <div className="grid grid-cols-2 gap-2">
+                 <div className="space-y-5">
+                   <div className="grid grid-cols-2 gap-3">
                      <button 
                        onClick={() => saveApiSettings('dev', customApiKey)}
-                       className={`p-2 rounded-xl text-[10px] font-black uppercase tracking-tighter transition-all border ${apiKeyMode === 'dev' ? 'bg-lime-500 border-lime-500 text-black' : 'border-neutral-800 text-neutral-500 hover:border-neutral-600'}`}
+                       className={`flex flex-col items-center justify-center p-3 rounded-2xl transition-all border group ${apiKeyMode === 'dev' ? 'bg-lime-500 border-lime-500 text-black shadow-lg shadow-lime-500/20' : 'border-neutral-800 text-neutral-500 hover:border-neutral-700'}`}
                      >
-                       <Database className="w-3 h-3 mx-auto mb-1" />
-                       Development
+                       <Database className={`w-5 h-5 mb-2 ${apiKeyMode === 'dev' ? 'text-black' : 'group-hover:text-white'}`} />
+                       <span className="text-[9px] font-black uppercase tracking-widest">Arkanum</span>
+                       <span className="text-[7px] opacity-60 font-bold uppercase mt-0.5">Development</span>
                      </button>
                      <button 
                        onClick={() => saveApiSettings('custom', customApiKey)}
-                       className={`p-2 rounded-xl text-[10px] font-black uppercase tracking-tighter transition-all border ${apiKeyMode === 'custom' ? 'bg-lime-500 border-lime-500 text-black' : 'border-neutral-800 text-neutral-500 hover:border-neutral-600'}`}
+                       className={`flex flex-col items-center justify-center p-3 rounded-2xl transition-all border group ${apiKeyMode === 'custom' ? 'bg-lime-500 border-lime-500 text-black shadow-lg shadow-lime-500/20' : 'border-neutral-800 text-neutral-500 hover:border-neutral-700'}`}
                      >
-                       <User className="w-3 h-3 mx-auto mb-1" />
-                       Custom Key
+                       <User className={`w-5 h-5 mb-2 ${apiKeyMode === 'custom' ? 'text-black' : 'group-hover:text-white'}`} />
+                       <span className="text-[9px] font-black uppercase tracking-widest">Kustom</span>
+                       <span className="text-[7px] opacity-60 font-bold uppercase mt-0.5">User Access</span>
                      </button>
                    </div>
 
-                   {apiKeyMode === 'custom' && (
-                     <div className="space-y-1 animate-in slide-in-from-top-1 duration-300">
-                       <label className="text-[8px] font-bold text-neutral-400 uppercase tracking-widest">Masukkan Gemini API Key</label>
-                       <input 
-                         type="password" 
-                         value={customApiKey}
-                         onChange={(e) => saveApiSettings('custom', e.target.value)}
-                         placeholder="AIzaSyB..."
-                         className={`w-full p-2 rounded-lg border text-[10px] ${themeClasses.input} focus:ring-1 ring-lime-500 outline-none`}
-                       />
-                       <p className="text-[7px] text-neutral-500 mt-1 italic leading-tight">Key disimpan secara lokal di browser Anda.</p>
+                   {apiKeyMode === 'custom' ? (
+                     <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                       <label className="text-[8px] font-black text-neutral-500 uppercase tracking-[0.2em] ml-1">License / API Key</label>
+                       <div className="relative">
+                         <input 
+                           type="password" 
+                           value={customApiKey}
+                           onChange={(e) => saveApiSettings('custom', e.target.value)}
+                           placeholder="Masukkan Google Gemini Key..."
+                           className={`w-full p-3 pr-10 rounded-xl border text-[11px] font-mono ${themeClasses.input} focus:ring-2 ring-lime-500 outline-none transition-all placeholder:text-neutral-600`}
+                         />
+                         {customApiKey && <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-lime-500" />}
+                       </div>
+                       <p className="text-[7px] text-neutral-500 px-1 leading-relaxed italic">
+                         Dapatkan API Key gratis di <a href="https://aistudio.google.com/app/apikey" target="_blank" className="text-lime-500 underline">Google AI Studio</a>. Data tersimpan aman di browser Anda.
+                       </p>
+                     </div>
+                   ) : (
+                     <div className="p-4 rounded-2xl bg-lime-500/5 border border-lime-500/10 flex items-start gap-3 animate-in slide-in-from-top-2 duration-300">
+                       <div className="w-8 h-8 rounded-full bg-lime-500/20 flex items-center justify-center flex-shrink-0">
+                         <CheckCircle2 className="w-4 h-4 text-lime-500" />
+                       </div>
+                       <div>
+                         <p className="text-[10px] font-black text-lime-500 uppercase tracking-widest">Sistem Aktif</p>
+                         <p className="text-[9px] text-neutral-500 mt-0.5 leading-normal">Menggunakan engine bawaan Arkanum Labs. Anda tidak perlu mengatur apapun.</p>
+                       </div>
                      </div>
                    )}
+                 </div>
 
-                   {apiKeyMode === 'dev' && (
-                     <div className="p-2 rounded-lg bg-blue-500/5 border border-blue-500/10">
-                       <p className="text-[8px] text-blue-400 leading-normal">Menggunakan key bawaan dari server Arkanum Labs.</p>
-                     </div>
-                   )}
+                 <div className="mt-5 pt-4 border-t border-neutral-900 flex items-center justify-between">
+                    <span className="text-[8px] font-bold text-neutral-600 uppercase tracking-widest">Network Status</span>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-lime-500" />
+                      <span className="text-[8px] font-black text-lime-500 uppercase">Online</span>
+                    </div>
                  </div>
                </div>
              )}
