@@ -6,7 +6,7 @@ import {
   Sun, Moon, Grid, Eye, EyeOff, ChevronDown, Sparkles, ChevronLeft, 
   ChevronRight, Tag, Megaphone, Lock, UserCheck, Layout, RefreshCw, AlertCircle,
   Home, Package, BarChart3, LogOut, Menu, UserPlus, Camera, Users, Maximize2,
-  Scan, ArrowLeft, Frame, Trash2
+  Scan, ArrowLeft, Frame, Trash2, Key, Database
 } from 'lucide-react';
 import { VOICES, CTA_OPTIONS } from './constants';
 import { SleeveType, HandCount, ThemeMode, AspectRatio } from './types';
@@ -56,6 +56,15 @@ export default function App() {
   // Navigation State
   const [activeTab, setActiveTab] = useState('product-pov');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // API Key Configuration State
+  const [showApiSettings, setShowApiSettings] = useState(false);
+  const [apiKeyMode, setApiKeyMode] = useState<'dev' | 'custom'>(
+    (localStorage.getItem('ark_api_mode') as 'dev' | 'custom') || 'dev'
+  );
+  const [customApiKey, setCustomApiKey] = useState(
+    localStorage.getItem('ark_custom_key') || ''
+  );
 
   // Theme & Shared Editor State
   const [themeMode, setThemeMode] = useState<ThemeMode>(ThemeMode.DARK);
@@ -111,11 +120,22 @@ export default function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Update API Settings to LocalStorage
+  const saveApiSettings = (mode: 'dev' | 'custom', key: string) => {
+    setApiKeyMode(mode);
+    setCustomApiKey(key);
+    localStorage.setItem('ark_api_mode', mode);
+    localStorage.setItem('ark_custom_key', key);
+  };
+
   const toggleTheme = () => setThemeMode(prev => prev === ThemeMode.DARK ? ThemeMode.LIGHT : ThemeMode.DARK);
 
   const handleGenerateVariations = async () => {
     if (!image) return alert("Unggah foto produk terlebih dahulu.");
-    if (!process.env.API_KEY) return alert("API Key tidak ditemukan. Pastikan sudah dikonfigurasi.");
+    
+    // Check key availability
+    const effectiveKey = apiKeyMode === 'custom' ? customApiKey : process.env.API_KEY;
+    if (!effectiveKey) return alert("API Key tidak tersedia. Masukkan key Anda atau cek konfigurasi environment.");
     
     setIsLoading(true); setGeneratedImages([]); setSelectedImageIndex(null);
     try {
@@ -154,7 +174,9 @@ export default function App() {
   const handleGenerateMixVariations = async () => {
     const activeProducts = mixImages.filter(img => img !== null) as string[];
     if (activeProducts.length === 0) return alert("Unggah minimal 1 produk untuk memulai.");
-    if (!process.env.API_KEY) return alert("API Key tidak ditemukan.");
+    
+    const effectiveKey = apiKeyMode === 'custom' ? customApiKey : process.env.API_KEY;
+    if (!effectiveKey) return alert("API Key tidak tersedia.");
     
     setIsLoading(true); setGeneratedImages([]); setSelectedImageIndex(null);
     try {
@@ -348,7 +370,66 @@ export default function App() {
             <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 rounded-lg hover:text-lime-500 lg:hidden"><Menu className="w-5 h-5" /></button>
             <h2 className="text-xs sm:text-sm font-bold uppercase tracking-widest text-neutral-500">{activeTab === 'product-pov' ? 'POV Tangan' : activeTab === 'product-mix' ? 'Produk Mix' : activeTab}</h2>
           </div>
-          <div className="flex items-center gap-4">
+          
+          <div className="flex items-center gap-4 relative">
+             {/* API Key Manager Button */}
+             <button 
+               onClick={() => setShowApiSettings(!showApiSettings)} 
+               className={`p-2 rounded-lg transition-all ${apiKeyMode === 'custom' ? 'text-lime-500 bg-lime-500/10' : 'text-neutral-400 hover:text-white'}`}
+               title="API Key Settings"
+             >
+               <Key className="w-5 h-5" />
+             </button>
+
+             {/* API Settings Popover */}
+             {showApiSettings && (
+               <div className={`absolute top-full right-0 mt-3 w-72 p-4 rounded-2xl border ${themeClasses.card} shadow-2xl z-[110] animate-in fade-in zoom-in-95 duration-200 backdrop-blur-xl`}>
+                 <div className="flex justify-between items-center mb-4">
+                   <h3 className="text-[10px] font-black uppercase tracking-widest text-neutral-500">API Key Manager</h3>
+                   <button onClick={() => setShowApiSettings(false)} className="text-neutral-500 hover:text-red-500"><X className="w-4 h-4" /></button>
+                 </div>
+                 
+                 <div className="space-y-4">
+                   <div className="grid grid-cols-2 gap-2">
+                     <button 
+                       onClick={() => saveApiSettings('dev', customApiKey)}
+                       className={`p-2 rounded-xl text-[10px] font-black uppercase tracking-tighter transition-all border ${apiKeyMode === 'dev' ? 'bg-lime-500 border-lime-500 text-black' : 'border-neutral-800 text-neutral-500 hover:border-neutral-600'}`}
+                     >
+                       <Database className="w-3 h-3 mx-auto mb-1" />
+                       Development
+                     </button>
+                     <button 
+                       onClick={() => saveApiSettings('custom', customApiKey)}
+                       className={`p-2 rounded-xl text-[10px] font-black uppercase tracking-tighter transition-all border ${apiKeyMode === 'custom' ? 'bg-lime-500 border-lime-500 text-black' : 'border-neutral-800 text-neutral-500 hover:border-neutral-600'}`}
+                     >
+                       <User className="w-3 h-3 mx-auto mb-1" />
+                       Custom Key
+                     </button>
+                   </div>
+
+                   {apiKeyMode === 'custom' && (
+                     <div className="space-y-1 animate-in slide-in-from-top-1 duration-300">
+                       <label className="text-[8px] font-bold text-neutral-400 uppercase tracking-widest">Masukkan Gemini API Key</label>
+                       <input 
+                         type="password" 
+                         value={customApiKey}
+                         onChange={(e) => saveApiSettings('custom', e.target.value)}
+                         placeholder="AIzaSyB..."
+                         className={`w-full p-2 rounded-lg border text-[10px] ${themeClasses.input} focus:ring-1 ring-lime-500 outline-none`}
+                       />
+                       <p className="text-[7px] text-neutral-500 mt-1 italic leading-tight">Key disimpan secara lokal di browser Anda.</p>
+                     </div>
+                   )}
+
+                   {apiKeyMode === 'dev' && (
+                     <div className="p-2 rounded-lg bg-blue-500/5 border border-blue-500/10">
+                       <p className="text-[8px] text-blue-400 leading-normal">Menggunakan key bawaan dari server Arkanum Labs.</p>
+                     </div>
+                   )}
+                 </div>
+               </div>
+             )}
+
              <div className="hidden sm:flex flex-col items-end mr-2"><p className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Admin Arkapro</p><p className="text-[10px] text-lime-500 font-black">PREMIUM ACCESS</p></div>
              <div className="w-10 h-10 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center overflow-hidden"><User className="w-5 h-5 text-neutral-400" /></div>
           </div>

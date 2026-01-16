@@ -10,8 +10,20 @@ const cleanBase64 = (base64: string) => {
   return base64;
 };
 
-// Selalu buat instance baru sebelum pemanggilan untuk memastikan mengambil API Key terbaru
-const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
+/**
+ * Mendapatkan instance GoogleGenAI dengan API Key yang sesuai.
+ * Mendukung mode Development (process.env.API_KEY) dan Custom (localStorage).
+ */
+const getAI = () => {
+  const mode = localStorage.getItem('ark_api_mode') || 'dev';
+  const customKey = localStorage.getItem('ark_custom_key');
+  
+  // Gunakan key kustom jika mode kustom aktif dan key tersedia, 
+  // jika tidak gunakan key dari environment (development)
+  const apiKey = (mode === 'custom' && customKey) ? customKey : process.env.API_KEY;
+  
+  return new GoogleGenAI({ apiKey: apiKey as string });
+};
 
 export const generateProductScript = async (params: {
   productDescription: string;
