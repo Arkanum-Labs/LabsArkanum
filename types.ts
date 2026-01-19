@@ -18,4 +18,4 @@ export enum ThemeMode {
 
 export type SleeveType = 'long' | 'short';
 export type HandCount = '1' | '2';
-export type AspectRatio = '1:1' | '9:16' | '16:9' | '3:4' | '4:3';
+export type AspectRatio = '1:1' | '9:16' | '16:9' | '3:4';

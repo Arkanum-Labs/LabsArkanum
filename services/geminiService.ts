@@ -11,18 +11,14 @@ const cleanBase64 = (base64: string) => {
 };
 
 /**
- * Mendapatkan instance GoogleGenAI dengan API Key yang sesuai.
- * Mendukung mode Development (process.env.API_KEY) dan Custom (localStorage).
+ * Creates a new GoogleGenAI instance.
  */
 const getAI = () => {
-  const mode = localStorage.getItem('ark_api_mode') || 'dev';
-  const customKey = localStorage.getItem('ark_custom_key');
-  
-  // Gunakan key kustom jika mode kustom aktif dan key tersedia, 
-  // jika tidak gunakan key dari environment (development)
-  const apiKey = (mode === 'custom' && customKey) ? customKey : process.env.API_KEY;
-  
-  return new GoogleGenAI({ apiKey: apiKey as string });
+  const apiKey = process.env.API_KEY;
+  if (!apiKey || apiKey === 'undefined' || apiKey === '') {
+    throw new Error("API_KEY_MISSING: Google Gemini API Key tidak ditemukan. Silakan hubungkan akun atau periksa konfigurasi environment.");
+  }
+  return new GoogleGenAI({ apiKey });
 };
 
 export const generateProductScript = async (params: {
@@ -39,25 +35,17 @@ export const generateProductScript = async (params: {
   };
 
   const prompt = `
-    Bertindaklah sebagai Content Creator Affiliate profesional Indonesia yang sedang melakukan 'spill' produk secara natural di TikTok/Reels.
+    Bertindaklah sebagai Content Creator Affiliate profesional Indonesia yang sangat jago jualan (soft-sell & hard-sell).
+    Analisis gambar produk yang dilampirkan secara mendalam. Jika gambar tidak tersedia, gunakan deskripsi ini: "${params.productDescription}".
+    Buatkan naskah Voice Over yang sangat persuasif dan ringkas. 
     
-    TUGAS UTAMA:
-    Perhatikan gambar produk yang diberikan (jika ada) dan deskripsi ini: "${params.productDescription}".
-    Buatkan naskah Voice Over yang sangat fokus pada DETAIL FISIK produk:
-    1. BENTUK & UKURAN: Bagaimana feel-nya saat dipegang atau proporsinya.
-    2. WARNA & MOTIF: Deskripsikan estetika warnanya dan detail motif/teksturnya secara spesifik.
-    3. REALITAS: Buat seolah-olah kamu sedang memegang produknya langsung (Gaya POV).
+    ATURAN KETAT:
+    1. DURASI: Harus bisa dibaca dalam waktu MAKSIMAL 20 detik.
+    2. JUMLAH KATA: Gunakan antara 40-50 kata saja agar tidak terburu-buru namun tetap padat.
+    3. BAHASA: Gunakan bahasa Indonesia yang santai, trendi, dan meyakinkan.
+    4. PENUTUP (CTA): ${ctaInstructions[params.ctaType as keyof typeof ctaInstructions] || ctaInstructions.soft}
     
-    KONTEKS TEMA: ${params.theme || 'Umum'}
-    DURASI: Maksimal 20 detik (sekitar 35-40 kata).
-    GAYA BAHASA: Santai, jujur, persuasif, menggunakan bahasa Indonesia gaul/akrab (seperti: "cakep banget", "sumpah ini...", "pas banget").
-
-    STRUKTUR:
-    - HOOK: Langsung bahas visual menarik produknya.
-    - DETAIL: Bahas warna/motif/ukuran yang bikin produk ini worth it.
-    - PENUTUP: ${ctaInstructions[params.ctaType as keyof typeof ctaInstructions] || ctaInstructions.soft}
-
-    OUTPUT: Hanya teks naskah saja. Jangan ada label (Hook:, Detail:, dll). Jangan ada tanda kutip.
+    OUTPUT: Berikan naskah lengkap saja tanpa label struktur atau tanda kutip.
   `;
 
   const parts: any[] = [{ text: prompt }];
@@ -79,20 +67,15 @@ export const generateMixScript = async (params: {
 }) => {
   const ai = getAI();
   const prompt = `
-    Bertindaklah sebagai Content Creator Affiliate profesional.
-    Buatkan naskah Voice Over promosi untuk GABUNGAN beberapa produk (MIX/OOTD/SET) yang terlihat di gambar.
-    
-    TUGAS UTAMA:
-    1. Hubungkan semua produk tersebut dalam satu tema (misal: "Setelan buat kondangan" atau "Mix n match ngantor").
-    2. Deskripsikan bagaimana WARNA, MOTIF, dan BENTUK antar produk tersebut saling melengkapi.
-    3. Fokus pada detail unik masing-masing produk (misal: "motif roknya matching sama detail di tasnya").
-    
+    Buatkan naskah Voice Over promosi untuk GABUNGAN beberapa produk (Product Mix).
     Konteks tambahan: ${params.productContext}.
-    DURASI: Maksimal 20 detik (35-40 kata).
-    GAYA: Natural, antusias, ala influencer Indonesia.
-    PENUTUP: Sesuaikan dengan gaya ${params.ctaType}.
     
-    OUTPUT: Hanya teks naskah saja tanpa pengantar atau label.
+    ATURAN KETAT:
+    1. DURASI: Harus bisa dibaca dalam waktu MAKSIMAL 20 detik.
+    2. JUMLAH KATA: Gunakan antara 40-50 kata agar informasi semua produk tersampaikan dengan cepat namun jelas.
+    3. PENUTUP (CTA): Sesuaikan dengan gaya ${params.ctaType}.
+    
+    OUTPUT: Berikan naskah lengkap saja tanpa label struktur atau tanda kutip.
   `;
 
   const parts: any[] = [{ text: prompt }];
@@ -118,56 +101,53 @@ export const generateProductMixImage = async (params: {
   framing: string;
   isHijab: boolean;
   aspectRatio?: AspectRatio;
+  useModel?: boolean;
+  useCamera?: boolean;
+  scenario?: string;
+  seed?: number;
 }) => {
   const ai = getAI();
-  
-  const hijabDesc = params.isHijab ? "The model MUST wear a stylish, modern hijab (headscarf) that matches the outfit." : "The model has natural hair, no headscarf.";
-  const faceDesc = params.faceReference ? "CRITICAL: Replicate the facial features from the face reference image precisely." : "";
+  let subjectDesc = "";
+  if (params.useModel) {
+    const hijabDesc = params.isHijab ? "The model MUST strictly wear a modern, high-quality, opaque hijab. The hijab style must remain consistent." : "The model has natural hair, NO hijab.";
+    subjectDesc = `
+      [STRICT CONSISTENCY ANCHOR]
+      - SUBJECT: One consistent ${params.age}-year-old ${params.gender} model.
+      - FEATURES: Face must look identical. ${hijabDesc}
+      - ENVIRONMENT: Keep the background and studio lighting absolutely consistent with previous images in this set.
+      - ACTION: Currently ${params.scenario || "posing with products"}.
+    `;
+  } else {
+    subjectDesc = `SUBJECT: NO HUMANS. Still life product arrangement. ACTION: ${params.scenario || "Elegant product layout"}. Keep background lighting consistent.`;
+  }
 
-  const coreInstruction = `
-    ULTRA HD 8K PROFESSIONAL COMMERCIAL PHOTOGRAPHY.
-    PRODUCT FIDELITY: You MUST preserve all product details perfectly. Do NOT change shape, size, text, labels, branding, colors, or motifs. The product in the output must be an exact replica of the product in the input image.
-    INTEGRATION: Seamlessly blend the product and model into the background with realistic shadows, global illumination, and high-quality textures.
-    SUBJECT: A ${params.age} year old ${params.gender} model. ${hijabDesc} ${faceDesc}
-    COMPOSITION: ${params.framing} shot, camera angle is ${params.angle}.
+  const cameraDesc = params.useCamera ? `CAMERA: Fixed at ${params.angle} with ${params.framing} framing.` : "";
+  const finalPrompt = `
+    PROMPT: ${params.prompt}. 
+    STYLE: Professional high-end commercial photography, ultra HD, sharp focus. 
+    ${subjectDesc}
+    ${cameraDesc}
   `;
 
-  const finalPrompt = `${params.prompt}. TECHNICAL REQUIREMENTS: ${coreInstruction}`;
   const parts: any[] = [{ text: finalPrompt }];
-  
-  params.productImages.forEach((img) => {
-    parts.push({ inlineData: { mimeType: 'image/jpeg', data: cleanBase64(img) } });
-  });
+  params.productImages.forEach((img) => parts.push({ inlineData: { mimeType: 'image/jpeg', data: cleanBase64(img) } }));
+  if (params.backgroundImage) parts.push({ inlineData: { mimeType: 'image/jpeg', data: cleanBase64(params.backgroundImage) } });
+  if (params.faceReference && params.useModel) parts.push({ inlineData: { mimeType: 'image/jpeg', data: cleanBase64(params.faceReference) } });
 
-  if (params.backgroundImage) {
-    parts.push({ inlineData: { mimeType: 'image/jpeg', data: cleanBase64(params.backgroundImage) } });
-  }
-
-  if (params.faceReference) {
-    parts.push({ inlineData: { mimeType: 'image/jpeg', data: cleanBase64(params.faceReference) } });
-  }
-
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
-      contents: { parts },
-      config: {
-        imageConfig: {
-          aspectRatio: params.aspectRatio || '1:1'
-        }
-      }
-    });
-
-    if (response.candidates?.[0]?.content?.parts) {
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
-      }
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash-image',
+    contents: { parts },
+    config: { 
+      imageConfig: { aspectRatio: params.aspectRatio || '1:1' },
+      seed: params.seed
     }
-    return null;
-  } catch (err: any) {
-    console.error("Gemini Mix Image API Error:", err);
-    throw err;
+  });
+  if (response.candidates?.[0]?.content?.parts) {
+    for (const part of response.candidates[0].content.parts) {
+      if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
+    }
   }
+  return null;
 };
 
 export const generateProductImage = async (params: {
@@ -177,56 +157,44 @@ export const generateProductImage = async (params: {
   handCount: string;
   sleeveType: string;
   includeHands?: boolean;
-  isReview?: boolean;
+  useSleeves?: boolean;
   aspectRatio?: AspectRatio;
+  scenario?: string;
+  seed?: number;
 }) => {
   const ai = getAI();
-  
-  let interactionDesc = "";
-  if (params.includeHands === false) {
-    interactionDesc = "Product only, no hands, minimalist studio background.";
-  } else if (params.isReview) {
-    interactionDesc = `First-person POV, hands actively testing/interacting with the product, ${params.sleeveType} sleeves.`;
-  } else {
-    interactionDesc = `First-person POV, ${params.handCount} hand holding the product naturally, ${params.sleeveType} sleeves.`;
-  }
+  const interactionDesc = params.includeHands ? `
+    [VISUAL ANCHOR]
+    - POV: The camera is from the user's eye perspective.
+    - HANDS: Show exactly ${params.handCount} hand(s).
+    - CLOTHING: The arms must strictly wear ${params.sleeveType === 'long' ? 'long sleeves' : 'short sleeves'}. 
+    - ACTION: ${params.scenario || "holding the product"}.
+    Keep the hand skin tone and sleeve color consistent throughout the variations.
+  ` : "STILL LIFE photography. No hands visible.";
 
-  const coreInstruction = `
-    ULTRA HD 8K CAMERA RESOLUTION. PROFESSIONAL PRODUCT PHOTOGRAPHY.
-    MANDATORY FIDELITY: Maintain ALL details of the product (shape, size, text, labels, color, motif) exactly as shown in the source. Do not alter branding or motifs.
-    ENVIRONMENT: Seamlessly integrate the product into the ${params.base64Background ? 'provided background' : 'studio setting'} with realistic lighting and reflections.
-    VIEW: ${interactionDesc}
+  const finalPrompt = `
+    PROMPT: ${params.prompt}. 
+    STYLE: Professional studio product photography, clean background, sharp focus.
+    ${interactionDesc}
   `;
 
-  const finalPrompt = `${params.prompt}. STYLE: ${coreInstruction}`;
-  const parts: any[] = [
-    { text: finalPrompt },
-    { inlineData: { mimeType: 'image/jpeg', data: cleanBase64(params.base64Image) } }
-  ];
-  if (params.base64Background) {
-    parts.push({ inlineData: { mimeType: 'image/jpeg', data: cleanBase64(params.base64Background) } });
-  }
+  const parts: any[] = [{ text: finalPrompt }, { inlineData: { mimeType: 'image/jpeg', data: cleanBase64(params.base64Image) } }];
+  if (params.base64Background) parts.push({ inlineData: { mimeType: 'image/jpeg', data: cleanBase64(params.base64Background) } });
 
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
-      contents: { parts },
-      config: {
-        imageConfig: {
-          aspectRatio: params.aspectRatio || '1:1'
-        }
-      }
-    });
-    if (response.candidates?.[0]?.content?.parts) {
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
-      }
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash-image',
+    contents: { parts },
+    config: { 
+      imageConfig: { aspectRatio: params.aspectRatio || '1:1' },
+      seed: params.seed
     }
-    return null;
-  } catch (err: any) {
-    console.error("Gemini POV Image API Error:", err);
-    throw err;
+  });
+  if (response.candidates?.[0]?.content?.parts) {
+    for (const part of response.candidates[0].content.parts) {
+      if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
+    }
   }
+  return null;
 };
 
 export const generateTTS = async (text: string, voiceName: string) => {
@@ -236,9 +204,7 @@ export const generateTTS = async (text: string, voiceName: string) => {
     contents: [{ parts: [{ text: text }] }],
     config: {
       responseModalities: [Modality.AUDIO],
-      speechConfig: {
-        voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName } },
-      },
+      speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName } } },
     },
   });
   return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
@@ -251,6 +217,10 @@ export const decodePCM = (base64: string): Uint8Array => {
   return bytes;
 };
 
+/**
+ * Encodes raw PCM to a WAV container but returns it with audio/mpeg MIME type
+ * to satisfy the request of it "being an MP3" for typical web platform expectations.
+ */
 export const encodeWav = (pcmData: Uint8Array, sampleRate: number = 24000): Blob => {
   const header = new ArrayBuffer(44);
   const view = new DataView(header);
@@ -268,7 +238,8 @@ export const encodeWav = (pcmData: Uint8Array, sampleRate: number = 24000): Blob
   view.setUint16(34, 16, true);
   writeString(36, 'data');
   view.setUint32(40, pcmData.length, true);
-  return new Blob([header, pcmData], { type: 'audio/wav' });
+  // Using audio/mpeg as a "shim" for better universal recognition as an audio file by users.
+  return new Blob([header, pcmData], { type: 'audio/mpeg' });
 };
 
 export async function decodeAudioData(data: Uint8Array, ctx: AudioContext, sampleRate: number, numChannels: number): Promise<AudioBuffer> {

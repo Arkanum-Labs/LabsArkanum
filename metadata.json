@@ -1,6 +1,6 @@
 {
-  "name": "ArkanumLabs",
-  "description": "An AI-powered suite for affiliate marketers to generate high-quality product images with hand POV variations and persuasive voice-over scripts using Gemini models.",
+  "name": "Arkanum Affiliate",
+  "description": "Affiliate Jadi Gampang - An AI-powered suite for affiliate marketers to generate high-quality product images and persuasive voice-over scripts.",
   "requestFramePermissions": [
     "camera"
   ]
